@@ -1,0 +1,18 @@
+// Creates a shared object for the selected layers (cmd control option m)
+var layer=selection.firstObject();
+
+if(layer) {
+    if (layer.className() == "MSShapeGroup") {
+            var name = [doc askForUserInput:"Modularizer" initialValue:"New Layer Style"]);
+            sharedStyles = doc.documentData().layerStyles();
+            sharedStyles.addSharedStyleWithName_firstInstance(name, layer.style());
+    } else if (layer.className() == "MSTextLayer") {
+            var name = [doc askForUserInput:"Modularizer" initialValue:"New Text Style"]);
+            textStyles = doc.documentData().layerTextStyles()
+            textStyles.addSharedStyleWithName_firstInstance(name, layer.style());
+    } else if (layer.className() == "MSLayerGroup") {
+        var name = [doc askForUserInput:"Modularizer" initialValue:"New Symbol"]);
+        symbols=doc.documentData().layerSymbols()
+        symbols.addSymbolWithName_firstInstance(name, layer);
+    }
+}
