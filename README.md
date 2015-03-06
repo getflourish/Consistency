@@ -8,4 +8,4 @@ When used on a text layer, the plugin will create a new text style.
 When used on a layer group, the plugin will create a new symbol.
 
 * Modularizer `⌘` + `ctrl` + `⌥` + `M`
-![Screenshot](https://dl.dropboxusercontent.com/u/974773/_keepalive/Modularizer.png)
+![Screenshot](https://s3.amazonaws.com/f.cl.ly/items/2r0g1Q1s2i1O0D241G11/Modularizer.png)
