@@ -3,7 +3,7 @@ Modularizer
 
 This plugin helps you to keep styles consistent. One hotkey to rule them all…
 
-* Hot to use: Select any layer and press `⌘` + `ctrl` + `⌥` + `M`
+* Select any layer and press `⌘` + `ctrl` + `⌥` + `M`
 * You can then select from existing styles or enter a new one.
 
 Works with Layer Styles, Text Styles and Symbols.
