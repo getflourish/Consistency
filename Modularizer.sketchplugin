@@ -5,23 +5,41 @@ if(layer) {
     if (!layer.parentOrSelfIsSymbol()) {
         if (true) {
             if (layer.className() == "MSShapeGroup") {
-                var name = getUserInput("New Layer Style");
-                if (name){
-                    sharedStyles = doc.documentData().layerStyles();
-                    sharedStyles.addSharedStyleWithName_firstInstance(name, layer.style());
+                var selection = selectLayerStyle();
+                var sharedStyles = doc.documentData().layerStyles();
+                if (selection){
+                    if (selection[1] == -1) {
+                       // create new text style
+                       sharedStyles.addSharedStyleWithName_firstInstance(selection[2], layer.style()); 
+                       doc.showMessage("Style created")
+                    } else {
+                        // apply existing style
+                        var index = selection[1];
+                        layer.setStyle(sharedStyles.objects().objectAtIndex(index).newInstance());
+                        doc.showMessage("Style applied");
+                    }
+                } else {
+                    var name = getUserInput("New Layer Style");
+                    if (name){
+                        // create new layer style
+                        sharedStyles = doc.documentData().layerStyles();
+                        sharedStyles.addSharedStyleWithName_firstInstance(name, layer.style());
+                        doc.showMessage("Style created")
+                    }
                 }
             } else if (layer.className() == "MSTextLayer") {
-                // var name = getUserInput("New Text Style");
                 var selection = selectTextStyle();
                 var textStyles = doc.documentData().layerTextStyles();
                 if (selection){
                     if (selection[1] == -1) {
                        // create new text style
                        textStyles.addSharedStyleWithName_firstInstance(selection[2], layer.style()); 
+                       doc.showMessage("Style created")
                     } else {
                         // apply existing style
                         var index = selection[1];
                         layer.setStyle(textStyles.objects().objectAtIndex(index).newInstance());
+                        doc.showMessage("Style applied")
                     }
                 } else {
                     var name = getUserInput("New Layer Style");
@@ -29,6 +47,7 @@ if(layer) {
                         // create new text style
                        textStyles = doc.documentData().layerTextStyles()
                        textStyles.addSharedStyleWithName_firstInstance(name, layer.style()); 
+                       doc.showMessage("Style created")
                     }
                 }
             } else if (layer.className() == "MSLayerGroup") {
@@ -90,6 +109,29 @@ function selectTextStyle () {
             textItems.push(style.name());
         }
         if (textItems) selection = createSelect("Select a style or create a new one", textItems, 0);
+    } else {
+        return;
+    }
+    return selection;
+}
+
+function selectLayerStyle () {
+    var layerStyles = [];
+    var layerStyleItems = [];
+
+    var selection;
+
+    var styles = doc.documentData().layerStyles().objects();
+    if (styles.count() != 0) {
+        for (var i = 0; i < styles.count(); i++) {
+          var style = styles.objectAtIndex(i);
+            layerStyles.push({
+                "layerStyle": style,
+                "name": style.name()
+            });
+            layerStyleItems.push(style.name());
+        }
+        if (layerStyleItems) selection = createSelect("Select a style or create a new one", layerStyleItems, 0);
     } else {
         return;
     }
