@@ -1,69 +1,91 @@
 // Creates a shared object for the selected layers (cmd control option m)
 var layer = selection.firstObject();
+var pass = true;
+var selectedLayers = selection;
 
-if(layer) {
-    if (!layer.parentOrSelfIsSymbol()) {
-        if (true) {
-            if (layer.className() == "MSShapeGroup") {
-                var selection = selectLayerStyle();
-                var sharedStyles = doc.documentData().layerStyles();
-                if (selection){
-                    if (selection[1] == -1) {
-                       // create new text style
-                       sharedStyles.addSharedStyleWithName_firstInstance(selection[2], layer.style()); 
-                       doc.showMessage("Style created")
-                    } else {
-                        // apply existing style
-                        var index = selection[1];
-                        layer.setStyle(sharedStyles.objects().objectAtIndex(index).newInstance());
-                        doc.showMessage("Style applied");
-                    }
-                } else {
-                    var name = getUserInput("New Layer Style");
-                    if (name){
-                        // create new layer style
-                        sharedStyles = doc.documentData().layerStyles();
-                        sharedStyles.addSharedStyleWithName_firstInstance(name, layer.style());
-                        doc.showMessage("Style created")
-                    }
-                }
-            } else if (layer.className() == "MSTextLayer") {
-                var selection = selectTextStyle();
-                var textStyles = doc.documentData().layerTextStyles();
-                if (selection){
-                    if (selection[1] == -1) {
-                       // create new text style
-                       textStyles.addSharedStyleWithName_firstInstance(selection[2], layer.style()); 
-                       doc.showMessage("Style created")
-                    } else {
-                        // apply existing style
-                        var index = selection[1];
-                        layer.setStyle(textStyles.objects().objectAtIndex(index).newInstance());
-                        doc.showMessage("Style applied")
-                    }
-                } else {
-                    var name = getUserInput("New Layer Style");
-                    if (name){
-                        // create new text style
-                       textStyles = doc.documentData().layerTextStyles()
-                       textStyles.addSharedStyleWithName_firstInstance(name, layer.style()); 
-                       doc.showMessage("Style created")
-                    }
-                }
-            } else if (layer.className() == "MSLayerGroup") {
-                var name = getUserInput("New Symbol");
-                if (name){
-                    symbols = doc.documentData().layerSymbols()
-                    symbols.addSymbolWithName_firstInstance(name, layer);
-                }
-            }
-        } else {
-            doc.showMessage("Can’t add another style to this layer.")
+if (selectedLayers.count() > 1) {
+    var baseClass = selectedLayers[0].className();
+    for (var i = 0; i < selectedLayers.count(); i++) {
+        if (selectedLayers[i].className() != baseClass) {
+            pass = false;
         }
-    } else {
-        doc.showMessage("Can’t nest symbols");
     }
 }
+
+if (pass) {
+    if(layer) {
+        if (!layer.parentOrSelfIsSymbol()) {
+            if (true) {
+                if (layer.className() == "MSShapeGroup") {
+                    var selection = selectLayerStyle();
+                    var sharedStyles = doc.documentData().layerStyles();
+                    if (selection){
+                        if (selection[1] == -1) {
+                           // create new text style
+                           sharedStyles.addSharedStyleWithName_firstInstance(selection[2], layer.style()); 
+                           doc.showMessage("Style created")
+                        } else {
+                            // apply existing style
+                            var index = selection[1];
+                            styleAll(selectedLayers, sharedStyles.objects().objectAtIndex(index).newInstance())
+                            doc.showMessage("Style applied");
+                        }
+                    } else {
+                        var name = getUserInput("New Layer Style");
+                        if (name){
+                            // create new layer style
+                            sharedStyles = doc.documentData().layerStyles();
+                            sharedStyles.addSharedStyleWithName_firstInstance(name, layer.style());
+                            doc.showMessage("Style created")
+                        }
+                    }
+                } else if (layer.className() == "MSTextLayer") {
+                    var selection = selectTextStyle();
+                    var textStyles = doc.documentData().layerTextStyles();
+                    if (selection){
+                        if (selection[1] == -1) {
+                           // create new text style
+                           textStyles.addSharedStyleWithName_firstInstance(selection[2], layer.style()); 
+                           doc.showMessage("Style created")
+                        } else {
+                            // apply existing style
+                            var index = selection[1];
+                            styleAll(selectedLayers, textStyles.objects().objectAtIndex(index).newInstance());
+                            doc.showMessage("Style applied")
+                        }
+                    } else {
+                        var name = getUserInput("New Layer Style");
+                        if (name){
+                            // create new text style
+                           textStyles = doc.documentData().layerTextStyles()
+                           textStyles.addSharedStyleWithName_firstInstance(name, layer.style()); 
+                           doc.showMessage("Style created")
+                        }
+                    }
+                } else if (layer.className() == "MSLayerGroup") {
+                    var name = getUserInput("New Symbol");
+                    if (name){
+                        symbols = doc.documentData().layerSymbols()
+                        symbols.addSymbolWithName_firstInstance(name, layer);
+                    }
+                }
+            } else {
+                doc.showMessage("Can’t add another style to this layer.")
+            }
+        } else {
+            doc.showMessage("Can’t nest symbols");
+        }
+    }
+} else {
+    doc.showMessage("Please make sure that you select layers of the same type.");
+}
+
+function styleAll(layers, style) {
+    for (var i = 0; i < layers.count(); i++) {
+        layers[i].setStyle(style);
+    }
+}
+
 
 doc.reloadInspector();
 
