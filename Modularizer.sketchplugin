@@ -1,18 +1,97 @@
 // Creates a shared object for the selected layers (cmd control option m)
-var layer=selection.firstObject();
+var layer = selection.firstObject();
 
 if(layer) {
-    if (layer.className() == "MSShapeGroup") {
-            var name = [doc askForUserInput:"Modularizer" initialValue:"New Layer Style"]);
-            sharedStyles = doc.documentData().layerStyles();
-            sharedStyles.addSharedStyleWithName_firstInstance(name, layer.style());
-    } else if (layer.className() == "MSTextLayer") {
-            var name = [doc askForUserInput:"Modularizer" initialValue:"New Text Style"]);
-            textStyles = doc.documentData().layerTextStyles()
-            textStyles.addSharedStyleWithName_firstInstance(name, layer.style());
-    } else if (layer.className() == "MSLayerGroup") {
-        var name = [doc askForUserInput:"Modularizer" initialValue:"New Symbol"]);
-        symbols=doc.documentData().layerSymbols()
-        symbols.addSymbolWithName_firstInstance(name, layer);
+    if (!layer.parentOrSelfIsSymbol()) {
+        if (true) {
+            if (layer.className() == "MSShapeGroup") {
+                var name = getUserInput("New Layer Style");
+                if (name){
+                    sharedStyles = doc.documentData().layerStyles();
+                    sharedStyles.addSharedStyleWithName_firstInstance(name, layer.style());
+                }
+            } else if (layer.className() == "MSTextLayer") {
+                // var name = getUserInput("New Text Style");
+                var selection = selectTextStyle();
+                var textStyles = doc.documentData().layerTextStyles();
+                if (selection){
+                    if (selection[1] == -1) {
+                       // create new text style
+                       textStyles.addSharedStyleWithName_firstInstance(selection[2], layer.style()); 
+                    } else {
+                        // apply existing style
+                        var index = selection[1];
+                        layer.setStyle(textStyles.objects().objectAtIndex(index).newInstance());
+                    }
+                } else {
+                    var name = getUserInput("New Layer Style");
+                    if (name){
+                        // create new text style
+                       textStyles = doc.documentData().layerTextStyles()
+                       textStyles.addSharedStyleWithName_firstInstance(name, layer.style()); 
+                    }
+                }
+            } else if (layer.className() == "MSLayerGroup") {
+                var name = getUserInput("New Symbol");
+                if (name){
+                    symbols = doc.documentData().layerSymbols()
+                    symbols.addSymbolWithName_firstInstance(name, layer);
+                }
+            }
+        } else {
+            doc.showMessage("Can’t add another style to this layer.")
+        }
+    } else {
+        doc.showMessage("Can’t nest symbols");
     }
+}
+
+doc.reloadInspector();
+
+function getUserInput(placeholder) {
+    var name = [doc askForUserInput:"Modularizer" initialValue:placeholder]);
+    return name;
+}
+
+function createSelect (msg, items, selectedItemIndex){
+    selectedItemIndex = selectedItemIndex || 0
+
+    var accessory = [[NSComboBox alloc] initWithFrame:NSMakeRect(0,0,200,25)]
+    [accessory addItemsWithObjectValues:items]
+    [accessory selectItemAtIndex:selectedItemIndex]
+
+    var alert = [[NSAlert alloc] init]
+    [alert setMessageText:msg]
+    [alert addButtonWithTitle:'OK']
+    [alert addButtonWithTitle:'Cancel']
+    [alert setAccessoryView:accessory]
+
+    var responseCode = [alert runModal]
+    var sel = [accessory indexOfSelectedItem]
+    var value = [accessory stringValue]
+
+    return [responseCode, sel, value]
+}
+
+function selectTextStyle () {
+    var textStyles = [];
+    var textItems = [];
+
+    var selection;
+
+    var styles = doc.documentData().layerTextStyles().objects();
+    if (styles.count() != 0) {
+        for (var i = 0; i < styles.count(); i++) {
+          var style = styles.objectAtIndex(i);
+            textStyles.push({
+                "textStyle": style,
+                "name": style.name()
+            });
+            textItems.push(style.name());
+        }
+        if (textItems) selection = createSelect("Select a style or create a new one", textItems, 0);
+    } else {
+        return;
+    }
+    return selection;
 }
