@@ -1,10 +1,10 @@
 Modularizer
 ===========
 
-This plugin helps you to keep styles consistent. One hotkey to rule them all…
+This plugin helps you to keep styles consistent. A single command that gives you context-aware access to all your document styles and lets you create new styles without a single touch of the inspector panel.
 
-* Select any layer and press `⌘` + `ctrl` + `⌥` + `M`
-* You can then select from existing styles or enter a new one.
+* Select any layer or group and press `⌘` + `ctrl` + `⌥` + `M`
+* You can then select from existing styles or enter a name for a new style that will be applied to the layer.
 
 Works with Layer Styles, Text Styles and Symbols.
 
