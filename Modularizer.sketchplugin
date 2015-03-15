@@ -73,7 +73,22 @@ if (pass) {
                 doc.showMessage("Can’t add another style to this layer.")
             }
         } else {
-            doc.showMessage("Can’t nest symbols");
+            // get the symbols name
+            var symbolName = doc.documentData().layerSymbols().symbolWithID(layer.sharedObjectID()).name()
+
+            // ask for a new name
+            var name = [doc askForUserInput:"Duplicate Symbol as…" initialValue:symbolName]);
+
+            if (name){
+
+                // unlink symbol from group
+                layer.unregisterAsSymbolIfNecessary();
+
+                // add the symbol
+                symbols = doc.documentData().layerSymbols();
+                symbols.addSymbolWithName_firstInstance(name, layer);
+            }
+            doc.showMessage("Duplicated Symbol");
         }
     }
 } else {
