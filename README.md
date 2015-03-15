@@ -1,4 +1,4 @@
-Modularizer
+Consistency
 ===========
 
 A single command that gives you context-aware access to all your document styles and lets you create new styles without touching the inspector panel.
