@@ -23,7 +23,8 @@ if (selectedLayers.count() > 1) {
 
 if (pass) {
     if(layer) {
-        if (!layer.parentOrSelfIsSymbol()) {
+        log(layer.closestSymbolInstance());
+        if (!layer.isSymbol()) {
             if (true) {
                 if (layer.className() == "MSShapeGroup") {
 
