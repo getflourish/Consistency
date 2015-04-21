@@ -27,22 +27,34 @@ if (pass) {
             if (true) {
                 if (layer.className() == "MSShapeGroup") {
 
+                    var layerStyle;
                     var selection = selectLayerStyle();
                     var sharedStyles = doc.documentData().layerStyles();
+                    var hasSharedStyle = layer.style().sharedObjectID() != null;
 
                     if (selection){
                         if(selection[0] == 1000) {
                             if (selection[1] == -1) {
 
                                // create new text style
-                               sharedStyles.addSharedStyleWithName_firstInstance(selection[2], layer.style());
+                               layerStyle = sharedStyles.addSharedStyleWithName_firstInstance(selection[2], layer.style());
                                doc.showMessage("Style created")
                             } else {
 
                                 // apply existing style
                                 var index = selection[1];
-                                styleAll(selectedLayers, sharedStyles.objects().objectAtIndex(index))
-                                doc.showMessage("Style applied");
+                                layerStyle = sharedStyles.objects().objectAtIndex(index);
+                            }
+
+                            // style all other layers
+                            if (!hasSharedStyle) {
+                                var result = styleAllLayersBasedOnLayerWithLayerStyle(layer, layerStyle);
+                                log(result)
+                                doc.showMessage("Style applied to " + result.count() + " instances");
+                            } else {
+                                // apply self
+                                styleLayer(layer, layerStyle);
+                                doc.showMessage("Style applied to selected layer");
                             }
                         }
                     } else {
@@ -50,7 +62,10 @@ if (pass) {
                         if (name){
                             // create new layer style
                             sharedStyles = doc.documentData().layerStyles();
-                            sharedStyles.addSharedStyleWithName_firstInstance(name, layer.style());
+                            layerStyle = sharedStyles.addSharedStyleWithName_firstInstance(name, layer.style());
+
+                            styleAllLayersBasedOnLayerWithLayerStyle(layer, layerStyle);
+
                             doc.showMessage("Style created")
                         }
                     }
@@ -59,7 +74,6 @@ if (pass) {
                     var textStyle;
                     var textStyles = doc.documentData().layerTextStyles();
                     var referenceStyle = layer.style().textStyle();
-                    var hasSharedStyle = layer.style().sharedObjectID() != null;
 
                     // todo if it has style and create a new one, dont apply
                     if (selection){
@@ -129,26 +143,8 @@ if (pass) {
     doc.showMessage("Please make sure that you select layers of the same type.");
 }
 
-function styleAll(layers, style) {
-    for (var i = 0; i < layers.count(); i++) {
-        styleLayer(layers[i], style);
-    }
-}
-
-function styleLayer(layer, style) {
-    layer.setStyle(style.newInstance());
-}
-
-function styleAllTextLayersBasedOnLayerWithTextStyle (layer, textStyle) {
-
-    // get all text layers that match the style
-    var layers = getLayersByTextStyle(layer.style().textStyle(), doc.currentPage().children());
-    styleAll(layers, textStyle);
-    return layers;
-}
-
-
 doc.reloadInspector();
+
 
 function getUserInput(placeholder) {
     var name = [doc askForUserInput:"Consistency" initialValue:placeholder]);
@@ -174,6 +170,49 @@ function createSelect (msg, items, selectedItemIndex){
 
     return [responseCode, sel, value]
 }
+
+function getLayersByTextStyle (textStyle, scope) {
+    var predicate = NSPredicate.predicateWithFormat("(style.textStyle != NULL) && (FUNCTION(style.textStyle, 'isEqualForSync:asPartOfSymbol:', %@, nil) == YES)", textStyle);
+    // query page layers
+    var queryResult = scope.filteredArrayUsingPredicate(predicate);
+
+    return queryResult;
+}
+
+function getLayersByLayerStyle (layerStyle, scope) {
+    var predicate = NSPredicate.predicateWithFormat("(style.fill != NULL) && (FUNCTION(style.fill, 'isEqualForSync:asPartOfSymbol:', %@, nil) == YES)", layerStyle.fill());
+    // query page layers
+    var queryResult = scope.filteredArrayUsingPredicate(predicate);
+
+    return queryResult;
+}
+
+function styleAll(layers, style) {
+    for (var i = 0; i < layers.count(); i++) {
+        styleLayer(layers[i], style);
+    }
+}
+
+function styleLayer(layer, style) {
+    layer.setStyle(style.newInstance());
+}
+
+function styleAllTextLayersBasedOnLayerWithTextStyle (layer, textStyle) {
+
+    // get all text layers that match the style
+    var layers = getLayersByTextStyle(layer.style().textStyle(), doc.currentPage().children());
+    styleAll(layers, textStyle);
+    return layers;
+}
+
+function styleAllLayersBasedOnLayerWithLayerStyle (layer, layerStyle) {
+
+    // get all text layers that match the style
+    var layers = getLayersByLayerStyle(layer.style(), doc.currentPage().children());
+    styleAll(layers, layerStyle);
+    return layers;
+}
+
 
 function selectTextStyle () {
     var textStyles = [];
@@ -219,13 +258,4 @@ function selectLayerStyle () {
         return;
     }
     return selection;
-}
-
-function getLayersByTextStyle (textStyle, scope) {
-    var predicate = NSPredicate.predicateWithFormat("(style.textStyle != NULL) && (FUNCTION(style.textStyle, 'isEqualForSync:asPartOfSymbol:', %@, nil) == YES)", textStyle);
-    log(predicate)
-    // query page layers
-    var queryResult = scope.filteredArrayUsingPredicate(predicate);
-
-    return queryResult;
 }
