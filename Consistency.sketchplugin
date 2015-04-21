@@ -70,10 +70,26 @@ if (pass) {
                         }
                     }
                 } else if (layer.className() == "MSTextLayer") {
-                    var selection = selectTextStyle();
+
                     var textStyle;
                     var textStyles = doc.documentData().layerTextStyles();
                     var referenceStyle = layer.style().textStyle();
+
+                    var hasSharedStyle = layer.style().sharedObjectID() != null;
+                    log(hasSharedStyle)
+
+                    var selectIndex = 0;
+
+                    if (textStyles) {
+                        // get index
+                        for (var i = 0; i < textStyles.objects().count(); i++) {
+                            if (layer.style().sharedObjectID() == textStyles.objects().objectAtIndex(i).objectID()) {
+                                selectIndex = i;
+                            }
+                        }
+                    }
+
+                    var selection = selectTextStyle(selectIndex);
 
                     // todo if it has style and create a new one, dont apply
                     if (selection){
@@ -214,7 +230,8 @@ function styleAllLayersBasedOnLayerWithLayerStyle (layer, layerStyle) {
 }
 
 
-function selectTextStyle () {
+function selectTextStyle (preselect) {
+    var preselect = preselect || 0;
     var textStyles = [];
     var textItems = [];
 
@@ -230,7 +247,7 @@ function selectTextStyle () {
             });
             textItems.push(style.name());
         }
-        if (textItems) selection = createSelect("Select a text style or create a new one", textItems, 0);
+        if (textItems) selection = createSelect("Select a text style or create a new one", textItems, preselect);
     } else {
         return;
     }
