@@ -23,7 +23,6 @@ if (selectedLayers.count() > 1) {
 
 if (pass) {
     if(layer) {
-        log(layer.closestSymbolInstance());
         if (!layer.isSymbol()) {
             if (true) {
                 if (layer.className() == "MSShapeGroup") {
@@ -130,8 +129,19 @@ if (pass) {
                 } else if (layer.className() == "MSLayerGroup") {
                     var name = getUserInput("New Symbol");
                     if (name){
+
+                        // get equal layers
+                        var layers = getEqualLayers(layer, doc.currentPage().children());
+
+                        // add symbol
                         symbols = doc.documentData().layerSymbols()
-                        symbols.addSymbolWithName_firstInstance(name, layer);
+                        var symbol = symbols.addSymbolWithName_firstInstance(name, layer);
+
+                        // dump(symbols)
+                        for (var i = 0; i < layers.count(); i++) {
+                            symbol.registerInstance(layers.objectAtIndex(i));
+                            doc.showMessage("Converted " + layers.count() + " layers to symbols.")
+                        }
                     }
                 }
             } else {
@@ -203,6 +213,20 @@ function getLayersByLayerStyle (layerStyle, scope) {
 
     return queryResult;
 }
+
+function getLayersBySize (referenceLayer, scope) {
+    var predicate = NSPredicate.predicateWithFormat("(frame != NULL) && frame.width == %@ && frame.height == %@ && className == %@", referenceLayer.frame().width(), referenceLayer.frame().height());
+    var queryResult = scope.filteredArrayUsingPredicate(predicate);
+
+    return queryResult;
+}
+
+function getEqualLayers (referenceLayer, scope) {
+    var predicate = NSPredicate.predicateWithFormat("(FUNCTION(self, 'isEqualForSync:asPartOfSymbol:', %@, nil) == YES)", context.selection[0]);
+    var queryResult = scope.filteredArrayUsingPredicate(predicate);
+    return queryResult;
+}
+
 
 function styleAll(layers, style) {
     for (var i = 0; i < layers.count(); i++) {
@@ -277,3 +301,28 @@ function selectLayerStyle () {
     }
     return selection;
 }
+
+function dump (obj) {
+          log("#####################################################################################")
+          log("## Dumping object " + obj )
+          log("## obj class is: " + [obj className])
+          log("#####################################################################################")
+          log("obj.properties:")
+          log([obj class].mocha().properties())
+          log("obj.propertiesWithAncestors:")
+          log([obj class].mocha().propertiesWithAncestors())
+          log("obj.classMethods:")
+          log([obj class].mocha().classMethods())
+          log("obj.classMethodsWithAncestors:")
+          log([obj class].mocha().classMethodsWithAncestors())
+          log("obj.instanceMethods:")
+          log([obj class].mocha().instanceMethods())
+          log("obj.instanceMethodsWithAncestors:")
+          log([obj class].mocha().instanceMethodsWithAncestors())
+          log("obj.protocols:")
+          log([obj class].mocha().protocols())
+          log("obj.protocolsWithAncestors:")
+          log([obj class].mocha().protocolsWithAncestors())
+          log("obj.treeAsDictionary():")
+          log(obj.treeAsDictionary())
+      }
