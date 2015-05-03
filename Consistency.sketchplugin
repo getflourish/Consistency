@@ -115,8 +115,13 @@ if (pass) {
 
                     // todo if it has style and create a new one, dont apply
                     if (selection){
+                        var selectedStyleIndex = selection[1];
+                        var checkBoxValue = selection[3];
+
+                        // pressed okay
                         if (selection[0] == 1000) {
-                            if (selection[1] == -1) {
+                            // new style name?
+                            if (selectedStyleIndex == -1) {
                                // create new text style
                                textStyle = textStyles.addSharedStyleWithName_firstInstance(selection[2], layer.style());
                                doc.showMessage("Duplicated text style");
@@ -124,13 +129,14 @@ if (pass) {
                                 // apply existing style
                                 var index = selection[1];
                                 textStyle = textStyles.objects().objectAtIndex(index);
-
-                                // style all other text layers
-                                if (selection[3] == 1) {
-                                    var result = styleAllTextLayersBasedOnLayerWithTextStyle(layer, textStyle);
-                                    doc.showMessage("Style applied to " + result.count() + " instances");
-                                }
                             }
+
+                            // style all other text layers
+                            if (checkBoxValue == 1) {
+                                var result = styleAllTextLayersBasedOnLayerWithTextStyle(layer, textStyle);
+                                doc.showMessage("Style applied to " + result.count() + " instances");
+                            }
+
                             // apply self
                             styleLayer(layer, textStyle);
                             doc.showMessage("Style applied to selected layer");
