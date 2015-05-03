@@ -31,9 +31,19 @@ if (pass) {
                 if (layer.className() == "MSShapeGroup") {
 
                     var layerStyle;
-                    var selection = selectLayerStyle();
                     var sharedStyles = doc.documentData().layerStyles();
                     var hasSharedStyle = layer.style().sharedObjectID() != null;
+
+                    var count = 0;
+                    count = countAllShapeLayersBasedOnLayerWithStyle(layer);
+
+                    // make sure that when the layer already has a set shared style, to not apply any changes to all other layers
+                    if (hasSharedStyle) {
+                        count = 0;
+                    }
+
+                    // select
+                    var selection = selectLayerStyle(0, count);
 
                     if (selection){
                         if(selection[0] == 1000) {
@@ -59,6 +69,8 @@ if (pass) {
                                 styleLayer(layer, layerStyle);
                                 doc.showMessage("Style applied to selected layer");
                             }
+                        } else if (selection[0] == 1002) {
+                            unlink(layer);
                         }
                     } else {
                         var name = getUserInput("New Layer Style");
@@ -79,7 +91,6 @@ if (pass) {
                     var referenceStyle = layer.style().textStyle();
 
                     var hasSharedStyle = layer.style().sharedObjectID() != null;
-                    log(hasSharedStyle)
 
                     var selectIndex = 0;
 
@@ -92,7 +103,15 @@ if (pass) {
                         }
                     }
 
-                    var selection = selectTextStyle(selectIndex);
+                    var count = 0;
+                    count = countAllTextLayersBasedOnLayerWithTextStyle(layer, textStyle);
+
+                    // make sure that when the layer already has a set shared style, to not apply any changes to all other layers
+                    if (hasSharedStyle) {
+                        count = 0;
+                    }
+
+                    var selection = selectTextStyle(selectIndex, count);
 
                     // todo if it has style and create a new one, dont apply
                     if (selection){
@@ -100,24 +119,26 @@ if (pass) {
                             if (selection[1] == -1) {
                                // create new text style
                                textStyle = textStyles.addSharedStyleWithName_firstInstance(selection[2], layer.style());
-                               doc.showMessage("Added new text style");
+                               doc.showMessage("Duplicated text style");
                             } else {
                                 // apply existing style
                                 var index = selection[1];
                                 textStyle = textStyles.objects().objectAtIndex(index);
+
+                                // style all other text layers
+                                if (selection[3] == 1) {
+                                    var result = styleAllTextLayersBasedOnLayerWithTextStyle(layer, textStyle);
+                                    doc.showMessage("Style applied to " + result.count() + " instances");
+                                }
                             }
-                            // style all other text layers
-                            if (!hasSharedStyle) {
-                                var result = styleAllTextLayersBasedOnLayerWithTextStyle(layer, textStyle);
-                                doc.showMessage("Style applied to " + result.count() + " instances");
-                            } else {
-                                // apply self
-                                styleLayer(layer, textStyle);
-                                doc.showMessage("Style applied to selected layer");
-                            }
+                            // apply self
+                            styleLayer(layer, textStyle);
+                            doc.showMessage("Style applied to selected layer");
+                        } else if (selection[0] == 1002) {
+                            unlink(layer);
                         }
                     } else {
-                        var name = getUserInput("New Text Style");
+                        var name = getUserInput("New Text Style for text layers", count);
                         if (name){
 
                             // create new text style
@@ -153,7 +174,7 @@ if (pass) {
                         var currentPage = doc.currentPage();
 
                         // generate symbol sheet
-                        addSymbolsSheetToPage("✴️ Symbols");
+                        // addSymbolsSheetToPage("✴️ Symbols");
 
                         // reset page
                         doc.setCurrentPage(currentPage);
@@ -170,7 +191,7 @@ if (pass) {
             // ask for a new name
             var name = [doc askForUserInput:"Duplicate Symbol as…" initialValue:symbolName]);
 
-            if (name){
+            if (name && name != symbolName){
 
                 // unlink symbol from group
                 layer.unregisterAsSymbolIfNecessary();
@@ -178,8 +199,9 @@ if (pass) {
                 // add the symbol
                 symbols = doc.documentData().layerSymbols();
                 symbols.addSymbolWithName_firstInstance(name, layer);
+
+                doc.showMessage("Duplicated Symbol");
             }
-            doc.showMessage("Duplicated Symbol");
         }
     }
 } else {
@@ -188,234 +210,61 @@ if (pass) {
 
 doc.reloadInspector();
 
-function addSymbolsSheetToPage (pageName) {
-
-    var symbols = doc.documentData().layerSymbols().objects();
-    var page = getPageByName(pageName);
-    page.removeAllLayers();
-
-    var artboard = MSArtboardGroup.new();
-    var frame = artboard.frame();
-    frame.setX(0);
-    frame.setY(0);
-    frame.setConstrainProportions(false);
-    frame.setWidth(800)
-    frame.setHeight(500)
-    page.addLayers([artboard])
-
-
-    for (var i = 0; i < symbols.count(); i++) {
-
-        // get symbol reference
-        var symbolRef = symbols.objectAtIndex(i);
-
-        // add layer from symbol to document
-        var symbol = symbols.objectAtIndex(i).newInstance();
-
-        // set name
-        symbol.setName(symbolRef.name());
-
-        // add symbol to page
-        artboard.addLayers([symbol]);
-    }
-    layout(artboard);
-}
-
-function layout (artboard) {
-
-    // ui/navigation/header
-    // ui/navigation/header/default
-    //
-
-    var name;
-    var moduleName;
-    var prevName;
-    var layer;
-    var layers = getLayersSortedByName(artboard.layers());
-
-    var padding = 200;
-    var nextX = padding;
-    var nextY = 0;
-    var gridX = 100;
-    var gridY = 200;
-    var maxX = 0;
-    var maxY = 0;
-    var lines = [];
-
-    for (var i = 0; i < layers.length; i++) {
-        layer = layers[i].layer;
-        name = layer.name();
-        moduleName = name.substr(0, name.lastIndexOf("/") + 1);
-
-        if (layer.frame().height() > maxY) maxY = layer.frame().height();
-
-        if (moduleName != prevName) {
-            nextX = padding;
-            nextY += maxY + gridY;
-            maxY = 0;
-            prevName = moduleName;
-
-            // draw a separator
-            var line = addLine(artboard);
-            line.frame().setX(padding);
-            line.frame().setY(nextY - gridY / 4);
-            line.frame().setWidth(100);
-            lines.push(line);
-
-            // add module name as text layer
-            var text = com.getflourish.common.addTextLayer(artboard, moduleName.toUpperCase());
-
-            var labelTextStyleName = "Style Inventory / Label";
-            var style = getTextStyleByName(labelTextStyleName);
-            if (style != null) {
-                // apply style
-                styleLayer(text, style);
-            } else {
-                doc.showMessage("style nzll")
-                // create style
-                text.setFontSize(15);
-                text.setFontPostscriptName("HelveticaNeue-Bold");
-                text.setCharacterSpacing(2);
-
-                // color
-                var color = MSColor.colorWithSVGString("#777777");
-
-                // set text style
-                text.setTextColor(color);
-
-                // add the new text style
-                //var textStyles = doc.documentData().layerTextStyles();
-                //textStyles.addSharedStyleWithName_firstInstance(labelTextStyleName, text.style());
-            }
-
-            text.frame().setY(nextY - gridY / 4 - 24);
-            text.frame().setX(padding);
-        } else {
-            nextX += gridX;
-        }
-        layer.frame().setX(nextX);
-        layer.frame().setY(nextY);
-
-        var r = layer.frame().x() + layer.frame().width();
-        if (r > maxX) maxX = r;
-
-        nextX += layer.frame().width();
-    }
-
-    artboard.frame().setHeight(nextY + padding + maxY)
-    artboard.frame().setWidth(maxX + padding)
-
-    // resize separators
-    for (var i = 0; i < lines.length; i++) {
-        lines[i].frame().setWidth(maxX);
-    }
-
-    // add background
-    var bg = com.getflourish.common.addSolidBackground(artboard, "#353535");
-    doc.currentPage().deselectAllLayers();
-    bg.setIsSelected(true);
-    com.getflourish.utils.sendToBack();
-    bg.setIsLocked(true);
-}
-function addLine (target) {
-    var black = MSColor.colorWithSVGString("#000000");
-    black.alpha = 0.15;
-    var line = com.getflourish.colors.addColorShape(target, black, 100, 1);
-    return line;
-}
-
-function getLayersSortedByName (layers) {
-
-    var layer;
-    var layersMeta = [];
-
-    for (var i = 0; i < layers.count(); i++) {
-
-        layer = layers.objectAtIndex(i);
-
-        layersMeta.push({
-            "name": layer.name(),
-            "layer": layer
-        });
-    }
-
-    return layersMeta.sort(sortName);
-}
-
-function sortName (_a, _b) {
-    var a = _a.name;
-    var b = _b.name;
-
-    return naturalSort(a, b);
-}
-
-/*
- * Natural Sort algorithm for Javascript - Version 0.7 - Released under MIT license
- * Author: Jim Palmer (based on chunking idea from Dave Koelle)
- */
-
- function naturalSort (a, b) {
-    var re = /(^-?[0-9]+(\.?[0-9]*)[df]?e?[0-9]?$|^0x[0-9a-f]+$|[0-9]+)/gi,
-        sre = /(^[ ]*|[ ]*$)/g,
-        dre = /(^([\w ]+,?[\w ]+)?[\w ]+,?[\w ]+\d+:\d+(:\d+)?[\w ]?|^\d{1,4}[\/\-]\d{1,4}[\/\-]\d{1,4}|^\w+, \w+ \d+, \d{4})/,
-        hre = /^0x[0-9a-f]+$/i,
-        ore = /^0/,
-        i = function(s) { return naturalSort.insensitive && (''+s).toLowerCase() || ''+s },
-        // convert all to strings strip whitespace
-        x = i(a).replace(sre, '') || '',
-        y = i(b).replace(sre, '') || '',
-        // chunk/tokenize
-        xN = x.replace(re, '\0$1\0').replace(/\0$/,'').replace(/^\0/,'').split('\0'),
-        yN = y.replace(re, '\0$1\0').replace(/\0$/,'').replace(/^\0/,'').split('\0'),
-        // numeric, hex or date detection
-        xD = parseInt(x.match(hre)) || (xN.length != 1 && x.match(dre) && Date.parse(x)),
-        yD = parseInt(y.match(hre)) || xD && y.match(dre) && Date.parse(y) || null,
-        oFxNcL, oFyNcL;
-    // first try and sort Hex codes or Dates
-    if (yD)
-        if ( xD < yD ) return -1;
-        else if ( xD > yD ) return 1;
-    // natural sorting through split numeric strings and default strings
-    for(var cLoc=0, numS=Math.max(xN.length, yN.length); cLoc < numS; cLoc++) {
-        // find floats not starting with '0', string or 0 if not defined (Clint Priest)
-        oFxNcL = !(xN[cLoc] || '').match(ore) && parseFloat(xN[cLoc]) || xN[cLoc] || 0;
-        oFyNcL = !(yN[cLoc] || '').match(ore) && parseFloat(yN[cLoc]) || yN[cLoc] || 0;
-        // handle numeric vs string comparison - number < string - (Kyle Adams)
-        if (isNaN(oFxNcL) !== isNaN(oFyNcL)) { return (isNaN(oFxNcL)) ? 1 : -1; }
-        // rely on string comparison if different types - i.e. '02' < 2 != '02' < '2'
-        else if (typeof oFxNcL !== typeof oFyNcL) {
-            oFxNcL += '';
-            oFyNcL += '';
-        }
-        if (oFxNcL < oFyNcL) return -1;
-        if (oFxNcL > oFyNcL) return 1;
-    }
-    return 0;
-}
 
 function getUserInput(placeholder) {
     var name = [doc askForUserInput:"Consistency" initialValue:placeholder]);
     return name;
 }
 
-function createSelect (msg, items, selectedItemIndex){
-    selectedItemIndex = selectedItemIndex || 0
+function createSelect (msg, items, selectedItemIndex, c){
+    var selectedItemIndex = selectedItemIndex || 0
+    var count = c || 0
+    var buttonStates = [1];
 
-    var accessory = [[NSComboBox alloc] initWithFrame:NSMakeRect(0,0,200,25)]
-    [accessory addItemsWithObjectValues:items]
-    [accessory selectItemAtIndex:selectedItemIndex]
+    var showCheckbox = true;
+    if (c <= 1) {
+        showCheckbox = false;
+        buttonStates = [0];
+    }
 
-    var alert = [[NSAlert alloc] init]
-    [alert setMessageText:msg]
-    [alert addButtonWithTitle:'OK']
-    [alert addButtonWithTitle:'Cancel']
-    [alert setAccessoryView:accessory]
+    // combobox
+    var combobox = [[NSComboBox alloc] initWithFrame:NSMakeRect(0,0,250,25)]
+    [combobox addItemsWithObjectValues:items]
+    [combobox selectItemAtIndex:selectedItemIndex]
+    combobox.setEditable(true);
+    combobox.setCompletes(true)
+
+    // checkbox
+    var checkbox = NSButton.alloc().initWithFrame(NSMakeRect(0.0, 40.0, 250.0, 20.0))
+    checkbox.setButtonType(NSSwitchButton)
+    checkbox.setTitle("Apply style to " + (count - 1) + " other matching layers")
+    checkbox.setState(buttonStates[0])
+    checkbox.setCOSJSTargetFunction(function(sender){
+      buttonStates[0] = buttonStates[10] == 0 ? 1 : 0
+    })
+
+    var alert = [COSAlertWindow new];
+
+    [alert setMessageText: 'Consistency']
+    [alert setInformativeText: msg]
+    [alert addButtonWithTitle: 'OK'];
+    [alert addButtonWithTitle: 'Cancel'];
+
+    if (c > 1) [alert addButtonWithTitle: 'Unlink'];
+
+    alert.addAccessoryView(combobox)
+
+    // only show the checkbox if necessary
+    if (showCheckbox) alert.addAccessoryView(checkbox)
 
     var responseCode = [alert runModal]
-    var sel = [accessory indexOfSelectedItem]
-    var value = [accessory stringValue]
+    var sel = [combobox indexOfSelectedItem]
+    var value = [combobox stringValue]
+    var checkboxValue = checkbox.state();
 
-    return [responseCode, sel, value]
+    combobox.setInitialFirstResponder(combobox);
+
+    return [responseCode, sel, value, checkboxValue]
 }
 
 function getLayersByTextStyle (textStyle, scope) {
@@ -466,6 +315,22 @@ function styleAllTextLayersBasedOnLayerWithTextStyle (layer, textStyle) {
     return layers;
 }
 
+function countAllTextLayersBasedOnLayerWithTextStyle (layer) {
+
+    // get all text layers that match the style
+    var layers = getLayersByTextStyle(layer.style().textStyle(), doc.currentPage().children());
+    return layers.count();
+}
+
+function countAllShapeLayersBasedOnLayerWithStyle (layer) {
+
+    // get all text layers that match the style
+    var layers = getLayersByLayerStyle(layer.style(), doc.currentPage().children());
+    return layers.count();
+}
+
+
+
 function styleAllLayersBasedOnLayerWithLayerStyle (layer, layerStyle) {
 
     // get all text layers that match the style
@@ -475,7 +340,7 @@ function styleAllLayersBasedOnLayerWithLayerStyle (layer, layerStyle) {
 }
 
 
-function selectTextStyle (preselect) {
+function selectTextStyle (preselect, c) {
     var preselect = preselect || 0;
     var textStyles = [];
     var textItems = [];
@@ -492,14 +357,15 @@ function selectTextStyle (preselect) {
             });
             textItems.push(style.name());
         }
-        if (textItems) selection = createSelect("Select a text style or create a new one", textItems, preselect);
+        if (textItems) selection = createSelect("Select or create a text style", textItems, preselect, c);
     } else {
         return;
     }
     return selection;
 }
 
-function selectLayerStyle () {
+function selectLayerStyle (preselect, c) {
+    var preselect = preselect || 0;
     var layerStyles = [];
     var layerStyleItems = [];
 
@@ -515,36 +381,11 @@ function selectLayerStyle () {
             });
             layerStyleItems.push(style.name());
         }
-        if (layerStyleItems) selection = createSelect("Select a style or create a new one", layerStyleItems, 0);
+        if (layerStyleItems) selection = createSelect("Select or create a style", layerStyleItems, preselect, c);
     } else {
         return;
     }
     return selection;
-}
-
-// Returns the page if it exists or creates a new page
-function getPageByName (name) {
-    for (var i = 0; i < doc.pages()
-        .count(); i++) {
-        var page = doc.pages()
-            .objectAtIndex(i);
-        if (page.name() == name) {
-            doc.setCurrentPage(page);
-            return page;
-        }
-    }
-    var page = addPage(name);
-    return page;
-}
-
-// Adds a new page to the document
-function addPage (name) {
-    // look for existing style sheet, otherwise create a new page with the styles
-    var page = doc.addBlankPage();
-    page.setName(name);
-    doc.setCurrentPage(page);
-    // my.common.refreshPage();
-    return page;
 }
 
 function getTextStyleByName(name) {
@@ -560,4 +401,11 @@ function getTextStyleByName(name) {
         }
     }
     return null;
+}
+
+function unlink (layer) {
+    // unlink
+    layer.style().setSharedObjectID(null);
+    doc.reloadInspector();
+    doc.showMessage("Unlinked style");
 }
