@@ -262,8 +262,6 @@ function createSelect (msg, items, selectedItemIndex, c){
     var value = [combobox stringValue]
     var checkboxValue = checkbox.state();
 
-    combobox.setInitialFirstResponder(combobox);
-
     return [responseCode, sel, value, checkboxValue]
 }
 
